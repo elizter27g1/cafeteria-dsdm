@@ -4,6 +4,16 @@
 > Este proyecto está **incompleto intencionalmente**. Los equipos deben completarlo durante la práctica.
 
 ---
+## EQUIPOS
+1. MARCOS
+2. ALAN ALEJANDRO
+3. VILLEDO
+4. EDWIN
+5. UBALDO
+6. JESUS ANDRE
+7. JESUS ALEJANDRO
+8. ERICK
+9. GABRIEL
 
 ## Instrucciones de ejecución
 
