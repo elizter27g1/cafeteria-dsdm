@@ -8,7 +8,7 @@ router = APIRouter()
 
 class PromocionNueva(BaseModel):
     nombre: str
-    tipo: str  # "porcentaje" o "monto_fijo"
+    tipo: str  
     descuento: float
     vigenciaHasta: str
 
@@ -58,13 +58,20 @@ def aplicar_promocion(id: int, venta: VentaAplicar):
         "pista": "Usa venta.totalVenta para calcular el descuento"
     })
 
-
 @router.get("/lista_promociones")
 def listar_promociones():
     lista_final = []
     
     for promo in db["promociones"]:
-        # Reconstruimos el diccionario para forzar el orden visual en todos los registros
+        # Desactiva automáticamente si ya venció
+        if promo.get("activa"):
+            try:
+                vigencia = datetime.fromisoformat(promo["vigenciaHasta"].replace('Z', '+00:00'))
+                if vigencia < datetime.now(vigencia.tzinfo):
+                    promo["activa"] = False
+            except Exception:
+                pass
+
         promo_ordenada = {
             "id": promo.get("id"),
             "nombre": promo.get("nombre"),
@@ -76,7 +83,6 @@ def listar_promociones():
         }
         
         promo_ordenada["estado"] = esta_activa(promo_ordenada)
-        
         lista_final.append(promo_ordenada)
         
     return JSONResponse(status_code=200, content=lista_final)
@@ -100,6 +106,7 @@ def desactivar_promocion(id: int):
             return {"mensaje": "Promocion desactivada con exito", "promocion": respuesta}
             
     return JSONResponse(status_code=404, content={"error": "Promocion no encontrada"})
+
 
 @router.get("/analisis_promociones")
 def analisis_promociones():
