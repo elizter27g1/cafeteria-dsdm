@@ -25,6 +25,25 @@ class ClienteNuevo(BaseModel):
             raise ValueError("El teléfono no puede estar vacío")
         return v.strip()
 
+class ClienteEditar(BaseModel):
+    nombre: Optional[str] = None
+    telefono: Optional[str] = None
+    correo: Optional[EmailStr] = None
+
+    @field_validator("nombre")
+    @classmethod
+    def nombre_no_vacio(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError("El nombre no puede estar vacío")
+        return v.strip() if v else v
+
+    @field_validator("telefono")
+    @classmethod
+    def telefono_no_vacio(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError("El teléfono no puede estar vacío")
+        return v.strip() if v else v
+
 class PuntosUpdate(BaseModel):
     puntos: int
 
@@ -107,13 +126,77 @@ def agregar_puntos(id: int, body: PuntosUpdate):
     })
 
 @router.put("/{id}")
-def editar_cliente(id: int):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Timebox 2"})
+def editar_cliente(id: int, body: ClienteEditar):
+    cliente = next((c for c in db["clientes"] if c["id"] == id), None)
+
+    if not cliente:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un cliente con id {id}"
+        })
+
+    campos_actualizados = body.model_dump(exclude_none=True)
+
+    if not campos_actualizados:
+        return JSONResponse(status_code=400, content={
+            "error": "Sin cambios",
+            "mensaje": "Debes enviar al menos un campo para actualizar (nombre, telefono o correo)"
+        })
+
+    cliente.update(campos_actualizados)
+
+    return JSONResponse(status_code=200, content={
+        "mensaje": "Cliente actualizado correctamente",
+        "cliente": cliente
+    })
 
 @router.delete("/{id}")
-def eliminar_cliente(id: int):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Timebox 2"})
+def eliminar_cliente(id: int, confirmar: bool = False):
+    cliente = next((c for c in db["clientes"] if c["id"] == id), None)
+
+    if not cliente:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un cliente con id {id}"
+        })
+
+    if not confirmar:
+        return JSONResponse(status_code=200, content={
+            "advertencia": "¿Estás seguro de que deseas eliminar este cliente?",
+            "cliente": cliente,
+            "instruccion": "Para confirmar la eliminación, vuelve a llamar este endpoint con ?confirmar=true"
+        })
+
+    db["clientes"].remove(cliente)
+
+    return JSONResponse(status_code=200, content={
+        "mensaje": f"El cliente '{cliente['nombre']}' fue eliminado del sistema"
+    })
 
 @router.post("/{id}/enviar-promociones")
 def enviar_correo_promociones(id: int):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Equipo 5"})
+    cliente = next((c for c in db["clientes"] if c["id"] == id), None)
+
+    if not cliente:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un cliente con id {id}"
+        })
+
+    promociones_activas = [p for p in db["promociones"] if p["activa"]]
+
+    if not promociones_activas:
+        return JSONResponse(status_code=200, content={
+            "mensaje": "No hay promociones activas para enviar",
+            "correo_enviado": False
+        })
+
+    nombres_promo = [p["nombre"] for p in promociones_activas]
+
+    return JSONResponse(status_code=200, content={
+        "mensaje": f"Correo de promociones enviado exitosamente a {cliente['correo']}",
+        "destinatario": cliente["nombre"],
+        "correo": cliente["correo"],
+        "promociones_enviadas": nombres_promo,
+        "total_promociones": len(promociones_activas)
+    })
