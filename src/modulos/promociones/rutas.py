@@ -27,7 +27,28 @@ def esta_activa(promo):
 
 @router.post("/")
 def crear_promocion(promo: PromocionNueva):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Timebox 1"})
+    nuevo_id = siguiente_id("promociones")
+    
+    # Extraemos los datos del modelo
+    datos = promo.model_dump() if hasattr(promo, 'model_dump') else promo.dict()
+    
+
+    nueva_promo = {
+        "id": nuevo_id,
+        "nombre": datos["nombre"],
+        "tipo": datos["tipo"],
+        "descuento": datos["descuento"],
+        "vigenciaHasta": datos["vigenciaHasta"],
+        "activa": True,
+        "codigoCupon": None,
+        "usos": 0 
+    }
+    
+    db["promociones"].append(nueva_promo)
+    respuesta = nueva_promo.copy()
+    respuesta["estado"] = esta_activa(respuesta)
+    
+    return JSONResponse(status_code=201, content=respuesta)
 
 @router.post("/{id}/aplicar")
 def aplicar_promocion(id: int, venta: VentaAplicar):
@@ -37,25 +58,48 @@ def aplicar_promocion(id: int, venta: VentaAplicar):
         "pista": "Usa venta.totalVenta para calcular el descuento"
     })
 
+
 @router.get("/lista_promociones")
 def listar_promociones():
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 9: primer Must Have — Timebox 1",
-        "pista": "Agrega un campo 'estado' a cada diccionario usando la funcion esta_activa()"
-    })
-
-@router.post("/{id}/cupon")
-def generar_cupon(id: int):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 9: Should Have — Timebox 2",
-        "pista": "Genera un string random alfanumerico (libreria string y random de Python)"
-    })
+    lista_final = []
+    
+    for promo in db["promociones"]:
+        # Reconstruimos el diccionario para forzar el orden visual en todos los registros
+        promo_ordenada = {
+            "id": promo.get("id"),
+            "nombre": promo.get("nombre"),
+            "tipo": promo.get("tipo"),
+            "descuento": promo.get("descuento"),
+            "vigenciaHasta": promo.get("vigenciaHasta"),
+            "activa": promo.get("activa"),
+            "codigoCupon": promo.get("codigoCupon")
+        }
+        
+        promo_ordenada["estado"] = esta_activa(promo_ordenada)
+        
+        lista_final.append(promo_ordenada)
+        
+    return JSONResponse(status_code=200, content=lista_final)
 
 @router.patch("/{id}/desactivar")
 def desactivar_promocion(id: int):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Timebox 2"})
+    for promo in db["promociones"]:
+        if promo.get("id") == id:
+            promo["activa"] = False
+            
+            respuesta = {
+                "id": promo.get("id"),
+                "nombre": promo.get("nombre"),
+                "tipo": promo.get("tipo"),
+                "descuento": promo.get("descuento"),
+                "vigenciaHasta": promo.get("vigenciaHasta"),
+                "activa": promo.get("activa"),
+                "codigoCupon": promo.get("codigoCupon"),
+                "estado": esta_activa(promo)
+            }
+            return {"mensaje": "Promocion desactivada con exito", "promocion": respuesta}
+            
+    return JSONResponse(status_code=404, content={"error": "Promocion no encontrada"})
 
 @router.get("/analisis_promociones")
 def analisis_promociones():
