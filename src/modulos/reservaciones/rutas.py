@@ -41,5 +41,5 @@ def verificar_disponibilidad(fecha: str, hora: str):
 def integracion_google_calendar():
     return JSONResponse(status_code=501, content={
         "error": "No implementado",
-        "mensaje": "Equipo 8: Could Have — integración con Google Calendar"
+        "mensaje": "Equipo 8: Could Have — integración con Google Calendar  "
     })
