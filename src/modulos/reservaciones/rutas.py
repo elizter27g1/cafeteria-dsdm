@@ -32,10 +32,15 @@ def cancelar_reservacion(id: int):
 
 @router.get("/disponibilidad")
 def verificar_disponibilidad(fecha: str, hora: str):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 8: Should Have — implementar en Timebox 2"
-    })
+    capacidad_maxima = 20 # Es la capacidad máxima de personas en el restaurante para esa fecha y hora
+    reservas = [r for r in db["reservaciones"] if r["fecha"] == fecha and r["hora"] == hora and not r["cancelada"]]
+    personas_reservadas = sum(r["personas"] for r in reservas)
+    disponible = personas_reservadas < capacidad_maxima
+    return {
+        "disponible": disponible,
+        "personas_reservadas": personas_reservadas,
+        "capacidad_maxima": capacidad_maxima
+    }
 
 @router.get("/google-calendar")
 def integracion_google_calendar():
