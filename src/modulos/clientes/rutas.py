@@ -71,11 +71,40 @@ def buscar_cliente(q: Optional[str] = None):
 
 @router.get("/{id}")
 def ver_cliente(id: int):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Timebox 1"})
+    cliente = next((c for c in db["clientes"] if c["id"] == id), None)
+
+    if not cliente:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un cliente con id {id}"
+        })
+
+    return JSONResponse(status_code=200, content={
+        "cliente": cliente
+    })
 
 @router.patch("/{id}/puntos")
-def agregar_puntos(id: int):
-    return JSONResponse(status_code=501, content={"error": "No implementado", "mensaje": "Timebox 2"})
+def agregar_puntos(id: int, body: PuntosUpdate):
+    cliente = next((c for c in db["clientes"] if c["id"] == id), None)
+
+    if not cliente:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un cliente con id {id}"
+        })
+
+    if body.puntos <= 0:
+        return JSONResponse(status_code=400, content={
+            "error": "Valor inválido",
+            "mensaje": "Los puntos a agregar deben ser un número positivo"
+        })
+
+    cliente["puntos"] += body.puntos
+
+    return JSONResponse(status_code=200, content={
+        "mensaje": f"Se agregaron {body.puntos} puntos al cliente",
+        "cliente": cliente
+    })
 
 @router.put("/{id}")
 def editar_cliente(id: int):
