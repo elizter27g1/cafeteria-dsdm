@@ -14,37 +14,59 @@ class ProductoNuevo(BaseModel):
     nombre: str
     precio: float
     categoria: str
+    disponible: bool
 
 class DisponibilidadUpdate(BaseModel):
     disponible: bool
 # ───────────────────────────────────────────────────────
 
-# ⨯ NO IMPLEMENTADO
-@router.post("/")
+# IMPLEMENTADO
+@router.post("/", status_code=201)
 def registrar_producto(producto: ProductoNuevo):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen registro de producto en Timebox 1",
-        "pista": "Recuerden validar los datos antes de registrar el producto"
+    nuevo_id = siguiente_id('productos')
+    nuevo_producto = {
+        'id': nuevo_id,
+        'nombre': producto.nombre,
+        'precio': producto.precio,
+        'categoria': producto.categoria,
+        'disponible': producto.disponible
+    }
+    db['productos'].append(nuevo_producto)
+    return {
+        'mensaje': 'Producto registrado exitosamente',
+        'producto': nuevo_producto
+    }
+
+
+# IMPLEMENTADO
+@router.put("/{id}", status_code=200)
+def editar_producto(id: int, producto: ProductoNuevo):
+    for p in db['productos']:
+        if p['id'] == id:
+            p['nombre'] = producto.nombre
+            p['precio'] = producto.precio
+            p['categoria'] = producto.categoria
+            p['disponible'] = producto.disponible
+            return {
+                'mensaje': 'Producto editado exitosamente',
+                'producto': p
+            }
+    return JSONResponse(status_code=404, content={
+        'error': 'Producto no encontrado'
     })
+    
 
-
-# ⨯ NO IMPLEMENTADO — Timebox 1
-@router.put("/{id}")
-def editar_producto(id: int):
-    # Nota como el id ya es int automáticamente
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen este endpoint en el Timebox 1",
-        "pista": "Usa db['productos'] para actualizar el producto."
-    })
-
-# ⨯ NO IMPLEMENTADO — Timebox 1
-@router.delete("/{id}")
+# IMPLEMENTADO
+@router.delete("/{id}", status_code=200)
 def eliminar_producto(id: int):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen este endpoint en el Timebox 1"
+    for p in db['productos']:
+        if p['id'] == id:
+            db['productos'].remove(p)
+            return {
+                'mensaje': 'Producto eliminado exitosamente'
+            }
+    return JSONResponse(status_code=404, content={
+        'error': 'Producto no encontrado'
     })
 
 # ⨯ NO IMPLEMENTADO — Timebox 2
