@@ -1,5 +1,9 @@
 # src/modulos/menu/rutas.py
-from fastapi import APIRouter
+from pathlib import Path
+import shutil
+from uuid import uuid4
+
+from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -71,33 +75,68 @@ def eliminar_producto(id: int):
 
 # ⨯ NO IMPLEMENTADO — Timebox 2
 @router.patch("/{id}/disponibilidad")
-def cambiar_disponibilidad(id: int):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen este endpoint en el Timebox 2",
-        "pista": "Recibe un JSON con {'disponible': true/false}"
-    })
+def cambiar_disponibilidad(id: int, data: DisponibilidadUpdate):
+    producto = next((p for p in db["productos"] if p["id"] == id), None)
 
-@router.get("/{id}")
+    if not producto:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un producto con id {id}"
+        })
+
+    producto["disponible"] = data.disponible
+
+    return {
+        "mensaje": "Disponibilidad actualizada",
+        "producto": producto
+    }
+
+@router.get("/")
 def listar_por_categoria(categoria: Optional[str] = None):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen este endpoint en el Timebox 2",
-        "pista": "Si se recibe una categoría, filtra los productos por esa categoría"
-    })
+    productos = db["productos"]
+
+    if categoria:
+        categoria_normalizada = categoria.strip().lower()
+        productos = [
+            p for p in productos
+            if p.get("categoria", "").strip().lower() == categoria_normalizada
+        ]
+
+    return {
+        "total": len(productos),
+        "categoria": categoria,
+        "productos": productos
+    }
 
 @router.post("/agregar-imagen/{id}")
-def agregar_imagen(id: int):
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen este endpoint en el Timebox 3",
-        "pista": "Recibe un archivo de imagen y guárdalo en el producto correspondiente"
-    })
+def agregar_imagen(id: int, imagen: UploadFile = File(...)):
+    producto = next((p for p in db["productos"] if p["id"] == id), None)
 
-@router.get("/exportar-pdf")
-def exportar_PDF_menu():
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 1: implementen este endpoint en el Timebox 3",
-        "pista": "Genera un PDF del menu completo con los productos y sus detalles"
-    })
+    if not producto:
+        return JSONResponse(status_code=404, content={
+            "error": "No encontrado",
+            "mensaje": f"No existe un producto con id {id}"
+        })
+
+    if not imagen.content_type or not imagen.content_type.startswith("image/"):
+        return JSONResponse(status_code=400, content={
+            "error": "Archivo inválido",
+            "mensaje": "El archivo debe ser una imagen"
+        })
+
+    extension = Path(imagen.filename or "").suffix or ".jpg"
+    nombre_archivo = f"producto_{id}_{uuid4().hex}{extension}"
+
+    carpeta_uploads = Path(__file__).resolve().parents[2] / "uploads" / "productos"
+    carpeta_uploads.mkdir(parents=True, exist_ok=True)
+
+    ruta_destino = carpeta_uploads / nombre_archivo
+    with ruta_destino.open("wb") as buffer:
+        shutil.copyfileobj(imagen.file, buffer)
+
+    producto["imagen"] = f"uploads/productos/{nombre_archivo}"
+
+    return {
+        "mensaje": "Imagen agregada correctamente",
+        "producto": producto
+    }
