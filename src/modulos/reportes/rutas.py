@@ -16,29 +16,92 @@ def es_hoy(fecha_str):
 # ✓ IMPLEMENTADO (Must Have)
 @router.get("/hoy/total")
 def total_hoy():
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 6: implementen total de ventas de hoy en Timebox 1",
-        "pista": "Filtra db['ventas'] con la funcion es_hoy(v['fecha']) que ya esta definida, luego suma el total de cada venta"
-    })
+    ventas = [v for v in db["ventas"] if es_hoy(v["fecha"])]
 
-# ⨯ NO IMPLEMENTADO — Timebox 1
+    total = 0
+    registros = []
+
+    for i, v in enumerate(ventas, start=1):
+        monto = v.get("total", 0)
+        total += monto
+        registros.append({
+            "venta": i,
+            "monto": monto
+        })
+
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+
+    return {
+        "titulo": "Reporte de Ventas",
+        "fecha": fecha_hoy,
+        "registros": registros,
+        "total": total
+    }
+
+
 @router.get("/hoy/ventas")
 def ventas_hoy():
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 6: Must Have — implementar en Timebox 1",
-        "pista": "Filtra db['ventas'] con la funcion es_hoy(v['fecha']) que ya esta definida"
-    })
+    ventas = [v for v in db["ventas"] if es_hoy(v["fecha"])]
+
+    registros = []
+
+    for v in ventas:
+        fecha_obj = datetime.fromisoformat(v["fecha"])
+
+        fecha = fecha_obj.strftime("%Y-%m-%d")
+        hora = fecha_obj.strftime("%H:%M")
+
+        # sacar nombres de productos (pueden venir varios)
+        productos = ", ".join([item["nombre"] for item in v.get("items", [])])
+
+        registros.append({
+            "producto": productos,
+            "fecha": fecha,
+            "hora": hora,
+            "total": v.get("total", 0)
+        })
+
+    return {
+        "titulo": "Lista de Ventas",
+        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "registros": registros
+    }
+
 
 # ⨯ NO IMPLEMENTADO — Timebox 1
 @router.get("/hoy/top")
 def top_hoy():
-    return JSONResponse(status_code=501, content={
-        "error": "No implementado",
-        "mensaje": "Equipo 6: Must Have",
-        "algoritmo": ["1. Filtrar ventas de hoy", "2. Recorrer items", "3. Acumular", "4. Ordenar"]
-    })
+    # 1. Filtrar ventas de hoy
+    ventas = [v for v in db["ventas"] if es_hoy(v["fecha"])]
+
+    # 2. Acumular productos
+    contador = {}
+
+    for v in ventas:
+        for item in v.get("items", []):
+            nombre = item.get("nombre")
+            cantidad = item.get("cantidad", 0)
+
+            if nombre not in contador:
+                contador[nombre] = 0
+
+            contador[nombre] += cantidad
+
+    # 3. Ordenar de mayor a menor
+    top = sorted(contador.items(), key=lambda x: x[1], reverse=True)
+
+    # 4. Formato de salida
+    return {
+        "titulo": "Mas vendidos",
+
+        "top_productos": [
+            {
+                "producto": nombre,
+                "cantidad_vendida": cantidad
+            }
+            for nombre, cantidad in top
+        ]
+    }
 
 # ⨯ NO IMPLEMENTADO — Timebox 2
 @router.get("/rango")
